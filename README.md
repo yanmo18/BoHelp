@@ -183,9 +183,9 @@ BoHelp/
 
 ## 联系方式
 
-- 项目地址：[https://github.com/yourusername/BoHelp](https://github.com/yourusername/BoHelp)
-- 开发者：[Your Name](https://github.com/yourusername)
-- 邮箱：your.email@example.com
+- 项目地址：[https://github.com/yanmo18/BoHelp](https://github.com/yanmo18/BoHelp)
+- 开发者：[Seren](https://github.com/yanmo18)
+- 邮箱：moyan548@foxmail.com
 
 ---
 
