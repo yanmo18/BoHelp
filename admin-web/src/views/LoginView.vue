@@ -96,7 +96,7 @@
           {{ loading ? '登录中...' : '登录' }}
         </button>
         <div class="login-tips" style="margin-top: 15px; text-align: center; font-size: 12px; color: var(--neutral-dark);">
-          提示：默认手机号为 13800138000，密码为 admin，验证码为图片中的字符
+          提示：默认手机号为 13800138000，密码为 123456，验证码为图片中的字符
         </div>
       </form>
       
