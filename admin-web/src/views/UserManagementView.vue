@@ -148,15 +148,14 @@
       </div>
     </div>
 
-    <!-- 提示弹窗 -->
-    <div class="toast" :class="toastType" v-if="toastVisible">
-      {{ toastMessage }}
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
+
+const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
 interface User {
   id: string
@@ -200,11 +199,6 @@ const userForm = ref<UserForm>({
   role: 'user',
   status: 'active'
 })
-
-// 提示信息
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastType = ref('toast-info')
 
 const totalPages = computed(() => {
   return Math.ceil(total.value / pageSize.value)
@@ -305,12 +299,12 @@ const closeModal = () => {
 
 const saveUser = () => {
   if (!userForm.value.username || !userForm.value.name || !userForm.value.phone) {
-    showToast('请填写必填字段', 'toast-error')
+    showToast('请填写必填字段', 'error')
     return
   }
   
   if (!isEditMode.value && !userForm.value.password) {
-    showToast('请输入密码', 'toast-error')
+    showToast('请输入密码', 'error')
     return
   }
   
@@ -326,7 +320,7 @@ const saveUser = () => {
         role: userForm.value.role,
         status: userForm.value.status
       }
-      showToast('用户编辑成功', 'toast-success')
+      showToast('用户编辑成功', 'success')
     }
   } else {
     // 添加用户
@@ -341,7 +335,7 @@ const saveUser = () => {
     }
     users.value.push(newUser)
     total.value = users.value.length
-    showToast('用户添加成功', 'toast-success')
+    showToast('用户添加成功', 'success')
   }
   
   closeModal()
@@ -361,20 +355,12 @@ const confirmDelete = () => {
   if (selectedUserId.value) {
     users.value = users.value.filter(user => user.id !== selectedUserId.value)
     total.value = users.value.length
-    showToast('用户删除成功', 'toast-success')
+    showToast('用户删除成功', 'success')
     closeDeleteModal()
   }
 }
 
-const showToast = (message: string, type: 'toast-success' | 'toast-error' | 'toast-info' = 'toast-info') => {
-  toastMessage.value = message
-  toastType.value = type
-  toastVisible.value = true
-  
-  setTimeout(() => {
-    toastVisible.value = false
-  }, 3000)
-}
+
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {

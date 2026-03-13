@@ -129,15 +129,14 @@
       </div>
     </div>
 
-    <!-- 提示弹窗 -->
-    <div class="toast" :class="toastType" v-if="toastVisible">
-      {{ toastMessage }}
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
+
+const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
 interface Notice {
   id: string
@@ -174,11 +173,6 @@ const noticeForm = ref<NoticeForm>({
   content: '',
   status: 'active'
 })
-
-// 提示信息
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastType = ref('toast-info')
 
 const totalPages = computed(() => {
   return Math.ceil(total.value / pageSize.value)
@@ -262,7 +256,7 @@ const closeModal = () => {
 
 const saveNotice = () => {
   if (!noticeForm.value.title || !noticeForm.value.content) {
-    showToast('请填写标题和内容', 'toast-error')
+    showToast('请填写标题和内容', 'error')
     return
   }
   
@@ -276,7 +270,7 @@ const saveNotice = () => {
         content: noticeForm.value.content,
         status: noticeForm.value.status
       }
-      showToast('公告编辑成功', 'toast-success')
+      showToast('公告编辑成功', 'success')
     }
   } else {
     // 添加公告
@@ -290,7 +284,7 @@ const saveNotice = () => {
     }
     notices.value.push(newNotice)
     total.value = notices.value.length
-    showToast('公告添加成功', 'toast-success')
+    showToast('公告添加成功', 'success')
   }
   
   closeModal()
@@ -310,20 +304,12 @@ const confirmDelete = () => {
   if (selectedNoticeId.value) {
     notices.value = notices.value.filter(notice => notice.id !== selectedNoticeId.value)
     total.value = notices.value.length
-    showToast('公告删除成功', 'toast-success')
+    showToast('公告删除成功', 'success')
     closeDeleteModal()
   }
 }
 
-const showToast = (message: string, type: 'toast-success' | 'toast-error' | 'toast-info' = 'toast-info') => {
-  toastMessage.value = message
-  toastType.value = type
-  toastVisible.value = true
-  
-  setTimeout(() => {
-    toastVisible.value = false
-  }, 3000)
-}
+
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {

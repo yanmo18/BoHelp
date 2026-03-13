@@ -145,15 +145,14 @@
       </div>
     </div>
 
-    <!-- 提示弹窗 -->
-    <div class="toast" :class="toastType" v-if="toastVisible">
-      {{ toastMessage }}
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
+
+const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
 interface Village {
   id: string
@@ -198,11 +197,6 @@ const villageForm = ref<VillageForm>({
   address: '',
   status: 'active'
 })
-
-// 提示信息
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastType = ref('toast-info')
 
 const totalPages = computed(() => {
   return Math.ceil(total.value / pageSize.value)
@@ -294,7 +288,7 @@ const closeModal = () => {
 
 const saveVillage = () => {
   if (!villageForm.value.name || !villageForm.value.code || !villageForm.value.manager || !villageForm.value.phone || !villageForm.value.address) {
-    showToast('请填写所有必填字段', 'toast-error')
+    showToast('请填写所有必填字段', 'error')
     return
   }
   
@@ -310,7 +304,7 @@ const saveVillage = () => {
         address: villageForm.value.address,
         status: villageForm.value.status
       }
-      showToast('村庄编辑成功', 'toast-success')
+      showToast('村庄编辑成功', 'success')
     }
   } else {
     // 添加村庄
@@ -326,7 +320,7 @@ const saveVillage = () => {
     }
     villages.value.push(newVillage)
     total.value = villages.value.length
-    showToast('村庄添加成功', 'toast-success')
+    showToast('村庄添加成功', 'success')
   }
   
   closeModal()
@@ -346,20 +340,12 @@ const confirmDelete = () => {
   if (selectedVillageId.value) {
     villages.value = villages.value.filter(village => village.id !== selectedVillageId.value)
     total.value = villages.value.length
-    showToast('村庄删除成功', 'toast-success')
+    showToast('村庄删除成功', 'success')
     closeDeleteModal()
   }
 }
 
-const showToast = (message: string, type: 'toast-success' | 'toast-error' | 'toast-info' = 'toast-info') => {
-  toastMessage.value = message
-  toastType.value = type
-  toastVisible.value = true
-  
-  setTimeout(() => {
-    toastVisible.value = false
-  }, 3000)
-}
+
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {

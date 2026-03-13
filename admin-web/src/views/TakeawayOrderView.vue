@@ -148,22 +148,22 @@
       </div>
     </div>
 
-    <!-- 提示弹窗 -->
-    <div class="toast" :class="toastType" v-if="toastVisible">
-      {{ toastMessage }}
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
+
+const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
 interface TakeawayOrder {
   id: string
   userName: string
   phone: string
   address: string
-  storeName: string
+  restaurant: string
+  orderContent: string
   amount: number
   status: 'pending' | 'processing' | 'completed' | 'cancelled'
   createdAt: string
@@ -180,11 +180,6 @@ const detailModalVisible = ref(false)
 const deleteModalVisible = ref(false)
 const selectedOrder = ref<TakeawayOrder | null>(null)
 const selectedOrderId = ref('')
-
-// 提示信息
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastType = ref('toast-info')
 
 const totalPages = computed(() => {
   return Math.ceil(total.value / pageSize.value)
@@ -267,20 +262,12 @@ const confirmDelete = () => {
   if (selectedOrderId.value) {
     orders.value = orders.value.filter(order => order.id !== selectedOrderId.value)
     total.value = orders.value.length
-    showToast('订单删除成功', 'toast-success')
+    showToast('订单删除成功', 'success')
     closeDeleteModal()
   }
 }
 
-const showToast = (message: string, type: 'toast-success' | 'toast-error' | 'toast-info' = 'toast-info') => {
-  toastMessage.value = message
-  toastType.value = type
-  toastVisible.value = true
-  
-  setTimeout(() => {
-    toastVisible.value = false
-  }, 3000)
-}
+
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {
