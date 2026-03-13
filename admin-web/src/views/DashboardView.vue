@@ -1,105 +1,128 @@
 <template>
   <div class="dashboard-container">
-    <!-- 统计卡片 -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon user-icon">
-          <i class="fas fa-users"></i>
-        </div>
-        <div class="stat-content">
-          <h3>用户总数</h3>
-          <p class="stat-number">{{ stats.totalUsers }}</p>
-          <p class="stat-trend" :class="{ positive: stats.userTrend > 0, negative: stats.userTrend < 0 }">
-            {{ stats.userTrend > 0 ? '+' : '' }}{{ stats.userTrend }}% 较上月
-          </p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon takeaway-icon">
-          <i class="fas fa-utensils"></i>
-        </div>
-        <div class="stat-content">
-          <h3>外卖订单</h3>
-          <p class="stat-number">{{ stats.totalTakeawayOrders }}</p>
-          <p class="stat-trend" :class="{ positive: stats.takeawayTrend > 0, negative: stats.takeawayTrend < 0 }">
-            {{ stats.takeawayTrend > 0 ? '+' : '' }}{{ stats.takeawayTrend }}% 较上月
-          </p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon takeit-icon">
-          <i class="fas fa-box"></i>
-        </div>
-        <div class="stat-content">
-          <h3>代拿订单</h3>
-          <p class="stat-number">{{ stats.totalTakeitOrders }}</p>
-          <p class="stat-trend" :class="{ positive: stats.takeitTrend > 0, negative: stats.takeitTrend < 0 }">
-            {{ stats.takeitTrend > 0 ? '+' : '' }}{{ stats.takeitTrend }}% 较上月
-          </p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon task-icon">
-          <i class="fas fa-tasks"></i>
-        </div>
-        <div class="stat-content">
-          <h3>悬赏任务</h3>
-          <p class="stat-number">{{ stats.totalTaskOrders }}</p>
-          <p class="stat-trend" :class="{ positive: stats.taskTrend > 0, negative: stats.taskTrend < 0 }">
-            {{ stats.taskTrend > 0 ? '+' : '' }}{{ stats.taskTrend }}% 较上月
-          </p>
-        </div>
-      </div>
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">加载中...</p>
     </div>
 
-    <!-- 订单变化图表 -->
-    <div class="card">
-      <div class="card-header">
-        订单变化趋势
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="error-container">
+      <div class="error-icon">
+        <i class="fas fa-exclamation-circle"></i>
       </div>
-      <div class="card-body">
-        <div ref="chartRef" class="chart-container"></div>
-      </div>
+      <p class="error-text">{{ error }}</p>
+      <button class="btn btn-primary" @click="fetchData">重试</button>
     </div>
 
-    <!-- 最近订单 -->
-    <div class="card">
-      <div class="card-header">
-        最近订单
+    <!-- 内容区域 -->
+    <div v-else>
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon user-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-content">
+            <h3>用户总数</h3>
+            <p class="stat-number">{{ stats.totalUsers }}</p>
+            <p class="stat-trend" :class="{ positive: stats.userTrend > 0, negative: stats.userTrend < 0 }">
+              {{ stats.userTrend > 0 ? '+' : '' }}{{ stats.userTrend }}% 较上月
+            </p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon takeaway-icon">
+            <i class="fas fa-utensils"></i>
+          </div>
+          <div class="stat-content">
+            <h3>外卖订单</h3>
+            <p class="stat-number">{{ stats.totalTakeawayOrders }}</p>
+            <p class="stat-trend" :class="{ positive: stats.takeawayTrend > 0, negative: stats.takeawayTrend < 0 }">
+              {{ stats.takeawayTrend > 0 ? '+' : '' }}{{ stats.takeawayTrend }}% 较上月
+            </p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon takeit-icon">
+            <i class="fas fa-box"></i>
+          </div>
+          <div class="stat-content">
+            <h3>代拿订单</h3>
+            <p class="stat-number">{{ stats.totalTakeitOrders }}</p>
+            <p class="stat-trend" :class="{ positive: stats.takeitTrend > 0, negative: stats.takeitTrend < 0 }">
+              {{ stats.takeitTrend > 0 ? '+' : '' }}{{ stats.takeitTrend }}% 较上月
+            </p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon task-icon">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <div class="stat-content">
+            <h3>悬赏任务</h3>
+            <p class="stat-number">{{ stats.totalTaskOrders }}</p>
+            <p class="stat-trend" :class="{ positive: stats.taskTrend > 0, negative: stats.taskTrend < 0 }">
+              {{ stats.taskTrend > 0 ? '+' : '' }}{{ stats.taskTrend }}% 较上月
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>订单ID</th>
-              <th>类型</th>
-              <th>用户</th>
-              <th>金额</th>
-              <th>状态</th>
-              <th>创建时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="order in recentOrders" :key="order.id">
-              <td>{{ order.id }}</td>
-              <td>{{ getOrderTypeText(order.type) }}</td>
-              <td>{{ order.user }}</td>
-              <td>¥{{ order.amount }}</td>
-              <td>
-                <span class="status-badge" :class="order.status">{{ getStatusText(order.status) }}</span>
-              </td>
-              <td>{{ order.createdAt }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <!-- 订单变化图表 -->
+      <div class="card">
+        <div class="card-header">
+          订单变化趋势
+        </div>
+        <div class="card-body">
+          <div ref="chartRef" class="chart-container"></div>
+        </div>
+      </div>
+
+      <!-- 最近订单 -->
+      <div class="card">
+        <div class="card-header">
+          最近订单
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>订单ID</th>
+                <th>类型</th>
+                <th>用户</th>
+                <th>金额</th>
+                <th>状态</th>
+                <th>创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in recentOrders" :key="order.id">
+                <td>{{ order.id }}</td>
+                <td>{{ getOrderTypeText(order.type) }}</td>
+                <td>{{ order.user }}</td>
+                <td>¥{{ order.amount }}</td>
+                <td>
+                  <span class="status-badge" :class="order.status">{{ getStatusText(order.status) }}</span>
+                </td>
+                <td>{{ order.createdAt }}</td>
+              </tr>
+              <tr v-if="recentOrders.length === 0">
+                <td colspan="6" class="no-data">暂无订单数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, inject } from 'vue'
 import * as echarts from 'echarts'
+
+const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
 interface Stats {
   totalUsers: number
@@ -135,6 +158,8 @@ const stats = ref<Stats>({
 const recentOrders = ref<Order[]>([])
 const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
+const loading = ref(true)
+const error = ref<string | null>(null)
 
 const getOrderTypeText = (type: string): string => {
   const typeMap: Record<string, string> = {
@@ -157,10 +182,32 @@ const getStatusText = (status: string): string => {
 
 const fetchStats = async () => {
   try {
-    // 模拟 API 请求
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端 API 获取统计数据
+    const response = await fetch('http://localhost:3001/api/admin/dashboard/stats', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
     
-    // 模拟数据
+    if (response.ok) {
+      const data = await response.json()
+      stats.value = data
+    } else {
+      // 模拟数据（用于开发环境）
+      stats.value = {
+        totalUsers: 1250,
+        userTrend: 15.2,
+        totalTakeawayOrders: 890,
+        takeawayTrend: 8.7,
+        totalTakeitOrders: 456,
+        takeitTrend: 23.4,
+        totalTaskOrders: 234,
+        taskTrend: 12.8
+      }
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+    // 模拟数据（用于开发环境）
     stats.value = {
       totalUsers: 1250,
       userTrend: 15.2,
@@ -171,17 +218,34 @@ const fetchStats = async () => {
       totalTaskOrders: 234,
       taskTrend: 12.8
     }
-  } catch (error) {
-    console.error('获取统计数据失败:', error)
   }
 }
 
 const fetchRecentOrders = async () => {
   try {
-    // 模拟 API 请求
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端 API 获取最近订单
+    const response = await fetch('http://localhost:3001/api/admin/dashboard/orders', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
     
-    // 模拟数据
+    if (response.ok) {
+      const data = await response.json()
+      recentOrders.value = data
+    } else {
+      // 模拟数据（用于开发环境）
+      recentOrders.value = [
+        { id: '10001', type: 'takeaway', user: '张三', amount: 35.5, status: 'completed', createdAt: '2024-03-12 10:30:00' },
+        { id: '10002', type: 'takeit', user: '李四', amount: 10.0, status: 'processing', createdAt: '2024-03-12 09:15:00' },
+        { id: '10003', type: 'task', user: '王五', amount: 50.0, status: 'pending', createdAt: '2024-03-12 08:45:00' },
+        { id: '10004', type: 'takeaway', user: '赵六', amount: 28.0, status: 'completed', createdAt: '2024-03-11 18:30:00' },
+        { id: '10005', type: 'takeit', user: '孙七', amount: 15.0, status: 'cancelled', createdAt: '2024-03-11 16:20:00' }
+      ]
+    }
+  } catch (error) {
+    console.error('获取最近订单失败:', error)
+    // 模拟数据（用于开发环境）
     recentOrders.value = [
       { id: '10001', type: 'takeaway', user: '张三', amount: 35.5, status: 'completed', createdAt: '2024-03-12 10:30:00' },
       { id: '10002', type: 'takeit', user: '李四', amount: 10.0, status: 'processing', createdAt: '2024-03-12 09:15:00' },
@@ -189,8 +253,6 @@ const fetchRecentOrders = async () => {
       { id: '10004', type: 'takeaway', user: '赵六', amount: 28.0, status: 'completed', createdAt: '2024-03-11 18:30:00' },
       { id: '10005', type: 'takeit', user: '孙七', amount: 15.0, status: 'cancelled', createdAt: '2024-03-11 16:20:00' }
     ]
-  } catch (error) {
-    console.error('获取最近订单失败:', error)
   }
 }
 
@@ -211,7 +273,10 @@ const initChart = () => {
     },
     legend: {
       data: ['外卖订单', '代拿订单', '悬赏任务'],
-      top: 10
+      top: 10,
+      textStyle: {
+        color: '#333333'
+      }
     },
     grid: {
       left: '3%',
@@ -223,10 +288,31 @@ const initChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      axisLine: {
+        lineStyle: {
+          color: '#E0E0E0'
+        }
+      },
+      axisLabel: {
+        color: '#666666'
+      }
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: '#E0E0E0'
+        }
+      },
+      axisLabel: {
+        color: '#666666'
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#F5F5F5'
+        }
+      }
     },
     series: [
       {
@@ -254,6 +340,14 @@ const initChart = () => {
                 color: 'rgba(216, 31, 38, 0.05)'
               }
             ]
+          }
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            borderWidth: 3,
+            shadowBlur: 10,
+            shadowColor: 'rgba(216, 31, 38, 0.5)'
           }
         }
       },
@@ -283,6 +377,14 @@ const initChart = () => {
               }
             ]
           }
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            borderWidth: 3,
+            shadowBlur: 10,
+            shadowColor: 'rgba(76, 175, 80, 0.5)'
+          }
         }
       },
       {
@@ -311,6 +413,14 @@ const initChart = () => {
               }
             ]
           }
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            borderWidth: 3,
+            shadowBlur: 10,
+            shadowColor: 'rgba(33, 150, 243, 0.5)'
+          }
         }
       }
     ]
@@ -325,13 +435,31 @@ const handleResize = () => {
   }
 }
 
-onMounted(() => {
-  fetchStats()
-  fetchRecentOrders()
+const fetchData = async () => {
+  loading.value = true
+  error.value = null
   
-  setTimeout(() => {
-    initChart()
-  }, 100)
+  try {
+    await Promise.all([
+      fetchStats(),
+      fetchRecentOrders()
+    ])
+  } catch (err) {
+    console.error('获取数据失败:', err)
+    error.value = '获取数据失败，请重试'
+    showToast('获取数据失败，请重试', 'error')
+  } finally {
+    loading.value = false
+    
+    // 初始化图表
+    setTimeout(() => {
+      initChart()
+    }, 100)
+  }
+}
+
+onMounted(() => {
+  fetchData()
   
   window.addEventListener('resize', handleResize)
 })
@@ -504,6 +632,103 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .chart-container {
     height: 300px;
+  }
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--neutral-light);
+  border-top: 5px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  font-weight: 500;
+}
+
+/* 错误状态样式 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.error-icon {
+  font-size: 48px;
+  color: var(--error-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+.error-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 无数据状态样式 */
+.no-data {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--neutral-dark);
+  font-size: var(--font-size-base);
+}
+
+/* 表格样式 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+  background-color: var(--neutral-light);
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.table tr:hover {
+  background-color: rgba(216, 31, 38, 0.05);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .table {
+    font-size: var(--font-size-sm);
+  }
+  
+  .table th,
+  .table td {
+    padding: var(--spacing-sm);
   }
 }
 </style>

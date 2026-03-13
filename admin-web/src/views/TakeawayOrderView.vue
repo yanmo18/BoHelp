@@ -13,8 +13,23 @@
       </div>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">加载中...</p>
+    </div>
+
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="error-container">
+      <div class="error-icon">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <p class="error-text">{{ error }}</p>
+      <button class="btn btn-primary" @click="fetchOrders">重试</button>
+    </div>
+
     <!-- 订单列表 -->
-    <div class="card">
+    <div v-else class="card">
       <div class="card-header">
         外卖订单列表
       </div>
@@ -39,7 +54,7 @@
               <td>{{ order.userName }}</td>
               <td>{{ order.phone }}</td>
               <td>{{ order.address }}</td>
-              <td>{{ order.storeName }}</td>
+              <td>{{ order.restaurant }}</td>
               <td>¥{{ order.amount }}</td>
               <td>
                 <span class="status-badge" :class="order.status">{{ getStatusText(order.status) }}</span>
@@ -53,6 +68,9 @@
                   删除
                 </button>
               </td>
+            </tr>
+            <tr v-if="orders.length === 0">
+              <td colspan="9" class="no-data">暂无订单数据</td>
             </tr>
           </tbody>
         </table>
@@ -110,7 +128,11 @@
           </div>
           <div class="order-detail-item">
             <span class="label">商家:</span>
-            <span class="value">{{ selectedOrder.storeName }}</span>
+            <span class="value">{{ selectedOrder.restaurant }}</span>
+          </div>
+          <div class="order-detail-item">
+            <span class="label">订单内容:</span>
+            <span class="value">{{ selectedOrder.orderContent }}</span>
           </div>
           <div class="order-detail-item">
             <span class="label">金额:</span>
@@ -174,6 +196,8 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 // 弹窗状态
 const detailModalVisible = ref(false)
@@ -196,46 +220,68 @@ const getStatusText = (status: string): string => {
 }
 
 const fetchOrders = async () => {
+  loading.value = true
+  error.value = null
+  
   try {
-    // 模拟 API 请求
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端 API 获取外卖订单列表
+    const response = await fetch(`http://localhost:3001/api/admin/takeaway?page=${currentPage.value}&pageSize=${pageSize.value}&keyword=${encodeURIComponent(searchKeyword.value)}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
     
-    // 模拟数据
+    if (response.ok) {
+      const data = await response.json()
+      orders.value = data.orders
+      total.value = data.total
+    } else {
+      // 模拟数据（用于开发环境）
+      const mockOrders: TakeawayOrder[] = [
+        { id: 'T10001', userName: '张三', phone: '13800138001', address: '博城小区1栋101', restaurant: '肯德基', orderContent: '汉堡套餐', amount: 35.5, status: 'completed', createdAt: '2024-03-12 10:30:00' },
+        { id: 'T10002', userName: '李四', phone: '13800138002', address: '博城小区2栋202', restaurant: '麦当劳', orderContent: '麦乐鸡套餐', amount: 42.0, status: 'processing', createdAt: '2024-03-12 09:15:00' },
+        { id: 'T10003', userName: '王五', phone: '13800138003', address: '博城小区3栋303', restaurant: '星巴克', orderContent: '咖啡', amount: 28.5, status: 'pending', createdAt: '2024-03-12 08:45:00' },
+        { id: 'T10004', userName: '赵六', phone: '13800138004', address: '博城小区4栋404', restaurant: '必胜客', orderContent: '披萨', amount: 89.0, status: 'completed', createdAt: '2024-03-11 18:30:00' },
+        { id: 'T10005', userName: '孙七', phone: '13800138005', address: '博城小区5栋505', restaurant: '汉堡王', orderContent: '皇堡套餐', amount: 32.0, status: 'cancelled', createdAt: '2024-03-11 16:20:00' },
+        { id: 'T10006', userName: '周八', phone: '13800138006', address: '博城小区6栋606', restaurant: '肯德基', orderContent: '全家桶', amount: 29.5, status: 'completed', createdAt: '2024-03-11 12:15:00' },
+        { id: 'T10007', userName: '吴九', phone: '13800138007', address: '博城小区7栋707', restaurant: '麦当劳', orderContent: '巨无霸套餐', amount: 38.0, status: 'processing', createdAt: '2024-03-11 11:30:00' },
+        { id: 'T10008', userName: '郑十', phone: '13800138008', address: '博城小区8栋808', restaurant: '星巴克', orderContent: '拿铁', amount: 45.0, status: 'pending', createdAt: '2024-03-11 10:45:00' },
+        { id: 'T10009', userName: '王十一', phone: '13800138009', address: '博城小区9栋909', restaurant: '必胜客', orderContent: '意面', amount: 76.5, status: 'completed', createdAt: '2024-03-10 19:30:00' },
+        { id: 'T10010', userName: '赵十二', phone: '13800138010', address: '博城小区10栋1010', restaurant: '汉堡王', orderContent: '双层皇堡', amount: 36.0, status: 'completed', createdAt: '2024-03-10 17:20:00' }
+      ]
+      
+      orders.value = mockOrders
+      total.value = mockOrders.length
+    }
+  } catch (err) {
+    console.error('获取外卖订单失败:', err)
+    error.value = '获取外卖订单失败，请重试'
+    showToast('获取外卖订单失败', 'error')
+    
+    // 模拟数据（用于开发环境）
     const mockOrders: TakeawayOrder[] = [
-      { id: 'T10001', userName: '张三', phone: '13800138001', address: '博城小区1栋101', storeName: '肯德基', amount: 35.5, status: 'completed', createdAt: '2024-03-12 10:30:00' },
-      { id: 'T10002', userName: '李四', phone: '13800138002', address: '博城小区2栋202', storeName: '麦当劳', amount: 42.0, status: 'processing', createdAt: '2024-03-12 09:15:00' },
-      { id: 'T10003', userName: '王五', phone: '13800138003', address: '博城小区3栋303', storeName: '星巴克', amount: 28.5, status: 'pending', createdAt: '2024-03-12 08:45:00' },
-      { id: 'T10004', userName: '赵六', phone: '13800138004', address: '博城小区4栋404', storeName: '必胜客', amount: 89.0, status: 'completed', createdAt: '2024-03-11 18:30:00' },
-      { id: 'T10005', userName: '孙七', phone: '13800138005', address: '博城小区5栋505', storeName: '汉堡王', amount: 32.0, status: 'cancelled', createdAt: '2024-03-11 16:20:00' },
-      { id: 'T10006', userName: '周八', phone: '13800138006', address: '博城小区6栋606', storeName: '肯德基', amount: 29.5, status: 'completed', createdAt: '2024-03-11 12:15:00' },
-      { id: 'T10007', userName: '吴九', phone: '13800138007', address: '博城小区7栋707', storeName: '麦当劳', amount: 38.0, status: 'processing', createdAt: '2024-03-11 11:30:00' },
-      { id: 'T10008', userName: '郑十', phone: '13800138008', address: '博城小区8栋808', storeName: '星巴克', amount: 45.0, status: 'pending', createdAt: '2024-03-11 10:45:00' },
-      { id: 'T10009', userName: '王十一', phone: '13800138009', address: '博城小区9栋909', storeName: '必胜客', amount: 76.5, status: 'completed', createdAt: '2024-03-10 19:30:00' },
-      { id: 'T10010', userName: '赵十二', phone: '13800138010', address: '博城小区10栋1010', storeName: '汉堡王', amount: 36.0, status: 'completed', createdAt: '2024-03-10 17:20:00' }
+      { id: 'T10001', userName: '张三', phone: '13800138001', address: '博城小区1栋101', restaurant: '肯德基', orderContent: '汉堡套餐', amount: 35.5, status: 'completed', createdAt: '2024-03-12 10:30:00' },
+      { id: 'T10002', userName: '李四', phone: '13800138002', address: '博城小区2栋202', restaurant: '麦当劳', orderContent: '麦乐鸡套餐', amount: 42.0, status: 'processing', createdAt: '2024-03-12 09:15:00' },
+      { id: 'T10003', userName: '王五', phone: '13800138003', address: '博城小区3栋303', restaurant: '星巴克', orderContent: '咖啡', amount: 28.5, status: 'pending', createdAt: '2024-03-12 08:45:00' },
+      { id: 'T10004', userName: '赵六', phone: '13800138004', address: '博城小区4栋404', restaurant: '必胜客', orderContent: '披萨', amount: 89.0, status: 'completed', createdAt: '2024-03-11 18:30:00' },
+      { id: 'T10005', userName: '孙七', phone: '13800138005', address: '博城小区5栋505', restaurant: '汉堡王', orderContent: '皇堡套餐', amount: 32.0, status: 'cancelled', createdAt: '2024-03-11 16:20:00' },
+      { id: 'T10006', userName: '周八', phone: '13800138006', address: '博城小区6栋606', restaurant: '肯德基', orderContent: '全家桶', amount: 29.5, status: 'completed', createdAt: '2024-03-11 12:15:00' },
+      { id: 'T10007', userName: '吴九', phone: '13800138007', address: '博城小区7栋707', restaurant: '麦当劳', orderContent: '巨无霸套餐', amount: 38.0, status: 'processing', createdAt: '2024-03-11 11:30:00' },
+      { id: 'T10008', userName: '郑十', phone: '13800138008', address: '博城小区8栋808', restaurant: '星巴克', orderContent: '拿铁', amount: 45.0, status: 'pending', createdAt: '2024-03-11 10:45:00' },
+      { id: 'T10009', userName: '王十一', phone: '13800138009', address: '博城小区9栋909', restaurant: '必胜客', orderContent: '意面', amount: 76.5, status: 'completed', createdAt: '2024-03-10 19:30:00' },
+      { id: 'T10010', userName: '赵十二', phone: '13800138010', address: '博城小区10栋1010', restaurant: '汉堡王', orderContent: '双层皇堡', amount: 36.0, status: 'completed', createdAt: '2024-03-10 17:20:00' }
     ]
     
     orders.value = mockOrders
     total.value = mockOrders.length
-  } catch (error) {
-    console.error('获取外卖订单失败:', error)
-    showToast('获取外卖订单失败', 'toast-error')
+  } finally {
+    loading.value = false
   }
 }
 
 const searchOrders = () => {
-  // 模拟搜索功能
+  currentPage.value = 1
   fetchOrders()
-  
-  // 根据搜索关键词过滤
-  if (searchKeyword.value) {
-    const filteredOrders = orders.value.filter(order => 
-      order.id.includes(searchKeyword.value) ||
-      order.phone.includes(searchKeyword.value) ||
-      order.userName.includes(searchKeyword.value)
-    )
-    orders.value = filteredOrders
-    total.value = filteredOrders.length
-  }
 }
 
 const viewOrder = (order: TakeawayOrder) => {
@@ -258,16 +304,39 @@ const closeDeleteModal = () => {
   selectedOrderId.value = ''
 }
 
-const confirmDelete = () => {
-  if (selectedOrderId.value) {
+const confirmDelete = async () => {
+  if (!selectedOrderId.value) {
+    return
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/admin/takeaway/${selectedOrderId.value}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    
+    if (response.ok) {
+      orders.value = orders.value.filter(order => order.id !== selectedOrderId.value)
+      total.value = orders.value.length
+      showToast('订单删除成功', 'success')
+      closeDeleteModal()
+    } else {
+      const errorData = await response.json()
+      showToast(errorData.message || '删除订单失败', 'error')
+    }
+  } catch (error) {
+    console.error('删除订单失败:', error)
+    showToast('删除订单失败，请重试', 'error')
+    
+    // 模拟删除订单
     orders.value = orders.value.filter(order => order.id !== selectedOrderId.value)
     total.value = orders.value.length
     showToast('订单删除成功', 'success')
     closeDeleteModal()
   }
 }
-
-
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {
@@ -405,6 +474,189 @@ onMounted(() => {
   color: var(--text-color);
 }
 
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--neutral-light);
+  border-top: 5px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  font-weight: 500;
+}
+
+/* 错误状态样式 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.error-icon {
+  font-size: 48px;
+  color: var(--error-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+.error-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 无数据状态样式 */
+.no-data {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--neutral-dark);
+  font-size: var(--font-size-base);
+}
+
+/* 表格样式 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+  background-color: var(--neutral-light);
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.table tr:hover {
+  background-color: rgba(216, 31, 38, 0.05);
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--white);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--neutral-light);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--neutral-dark);
+  transition: color var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--primary-color);
+}
+
+.modal-body {
+  padding: var(--spacing-md);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  background-color: var(--neutral-light);
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
+  color: var(--secondary-color);
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.1);
+}
+
+.form-control:disabled {
+  background-color: var(--neutral-light);
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .search-bar {
     flex-direction: column;
@@ -437,6 +689,18 @@ onMounted(() => {
   .order-detail-item .label {
     width: 100%;
     margin-bottom: 4px;
+  }
+  
+  .modal-content {
+    width: 95%;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .modal-footer button {
+    width: 100%;
   }
 }
 </style>

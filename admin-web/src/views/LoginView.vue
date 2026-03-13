@@ -236,76 +236,83 @@ const handlePhonePasswordLogin = async () => {
     // 调用后端API
     console.log('开始登录请求:', phonePasswordForm.value.phone)
     
-    // 模拟登录（用于开发环境）
-    if (phonePasswordForm.value.phone === '13800138000' && phonePasswordForm.value.password === 'admin') {
-      console.log('模拟登录成功')
-      const mockUser = {
-        id: 1,
-        phone: '13800138000',
-        username: 'admin',
-        realName: '管理员',
-        role: 'ADMIN'
-      }
-      // 存储token
-      localStorage.setItem('token', 'mock-token')
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      
-      // 记住密码
-      if (phonePasswordForm.value.remember) {
-        localStorage.setItem('phone', phonePasswordForm.value.phone)
-        localStorage.setItem('password', phonePasswordForm.value.password)
-      } else {
-        localStorage.removeItem('phone')
-        localStorage.removeItem('password')
-      }
-      
-      // 跳转到首页
-      router.push('/dashboard')
-    } else {
-      // 真实API调用
-      try {
-        const response = await fetch('http://localhost:3001/api/admin/user/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            phone: phonePasswordForm.value.phone,
-            password: phonePasswordForm.value.password
-          })
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/user/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phone: phonePasswordForm.value.phone,
+          password: phonePasswordForm.value.password
         })
-        console.log('登录请求响应:', response)
+      })
+      console.log('登录请求响应:', response)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('登录成功，返回数据:', data)
         
-        if (response.ok) {
-          const user = await response.json()
-          console.log('登录成功，用户信息:', user)
-          // 存储token
-          localStorage.setItem('token', 'mock-token')
-          localStorage.setItem('user', JSON.stringify(user))
-          
-          // 记住密码
-          if (phonePasswordForm.value.remember) {
-            localStorage.setItem('phone', phonePasswordForm.value.phone)
-            localStorage.setItem('password', phonePasswordForm.value.password)
-          } else {
-            localStorage.removeItem('phone')
-            localStorage.removeItem('password')
-          }
-          
-          // 跳转到首页
-          router.push('/dashboard')
+        // 存储token和用户信息
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token)
+          localStorage.setItem('user', JSON.stringify(data.user))
         } else {
-          try {
-            const error = await response.json()
-            console.log('登录失败，错误信息:', error)
-            showToast(error.message || '手机号或密码错误', 'error')
-          } catch (e) {
-            console.log('登录失败，无法解析错误信息')
-            showToast('登录失败，服务器错误', 'error')
-          }
+          // 兼容旧版本API
+          localStorage.setItem('token', 'mock-token')
+          localStorage.setItem('user', JSON.stringify(data))
         }
-      } catch (apiError) {
-        console.error('API调用失败:', apiError)
+        
+        // 记住密码
+        if (phonePasswordForm.value.remember) {
+          localStorage.setItem('phone', phonePasswordForm.value.phone)
+          localStorage.setItem('password', phonePasswordForm.value.password)
+        } else {
+          localStorage.removeItem('phone')
+          localStorage.removeItem('password')
+        }
+        
+        // 跳转到首页
+        router.push('/dashboard')
+      } else {
+        try {
+          const error = await response.json()
+          console.log('登录失败，错误信息:', error)
+          showToast(error.message || '手机号或密码错误', 'error')
+        } catch (e) {
+          console.log('登录失败，无法解析错误信息')
+          showToast('登录失败，服务器错误', 'error')
+        }
+      }
+    } catch (apiError) {
+      console.error('API调用失败:', apiError)
+      
+      // 模拟登录（用于开发环境）
+      if (phonePasswordForm.value.phone === '13800138000' && phonePasswordForm.value.password === 'admin') {
+        console.log('模拟登录成功')
+        const mockUser = {
+          id: 1,
+          phone: '13800138000',
+          username: 'admin',
+          realName: '管理员',
+          role: 'ADMIN'
+        }
+        // 存储token
+        localStorage.setItem('token', 'mock-token')
+        localStorage.setItem('user', JSON.stringify(mockUser))
+        
+        // 记住密码
+        if (phonePasswordForm.value.remember) {
+          localStorage.setItem('phone', phonePasswordForm.value.phone)
+          localStorage.setItem('password', phonePasswordForm.value.password)
+        } else {
+          localStorage.removeItem('phone')
+          localStorage.removeItem('password')
+        }
+        
+        // 跳转到首页
+        router.push('/dashboard')
+      } else {
         showToast('登录失败，请检查网络连接或服务器状态', 'error')
       }
     }
@@ -324,58 +331,65 @@ const handleSmsLogin = async () => {
     // 调用后端API
     console.log('开始短信登录请求:', smsForm.value.phone)
     
-    // 模拟登录（用于开发环境）
-    if (smsForm.value.phone === '13800138000' && smsForm.value.smsCode === '1234') {
-      console.log('模拟短信登录成功')
-      const mockUser = {
-        id: 1,
-        phone: '13800138000',
-        username: 'admin',
-        realName: '管理员',
-        role: 'ADMIN'
-      }
-      // 存储token
-      localStorage.setItem('token', 'mock-token')
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      
-      // 跳转到首页
-      router.push('/dashboard')
-    } else {
-      // 真实API调用
-      try {
-        const response = await fetch('http://localhost:3001/api/admin/user/login/sms', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            phone: smsForm.value.phone,
-            smsCode: smsForm.value.smsCode
-          })
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/user/login/sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phone: smsForm.value.phone,
+          smsCode: smsForm.value.smsCode
         })
-        console.log('短信登录请求响应:', response)
+      })
+      console.log('短信登录请求响应:', response)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('短信登录成功，返回数据:', data)
         
-        if (response.ok) {
-          const user = await response.json()
-          console.log('短信登录成功，用户信息:', user)
-          // 存储token
-          localStorage.setItem('token', 'mock-token')
-          localStorage.setItem('user', JSON.stringify(user))
-          
-          // 跳转到首页
-          router.push('/dashboard')
+        // 存储token和用户信息
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token)
+          localStorage.setItem('user', JSON.stringify(data.user))
         } else {
-          try {
-            const error = await response.json()
-            console.log('短信登录失败，错误信息:', error)
-            showToast(error.message || '手机号或验证码错误', 'error')
-          } catch (e) {
-            console.log('短信登录失败，无法解析错误信息')
-            showToast('登录失败，服务器错误', 'error')
-          }
+          // 兼容旧版本API
+          localStorage.setItem('token', 'mock-token')
+          localStorage.setItem('user', JSON.stringify(data))
         }
-      } catch (apiError) {
-        console.error('API调用失败:', apiError)
+        
+        // 跳转到首页
+        router.push('/dashboard')
+      } else {
+        try {
+          const error = await response.json()
+          console.log('短信登录失败，错误信息:', error)
+          showToast(error.message || '手机号或验证码错误', 'error')
+        } catch (e) {
+          console.log('短信登录失败，无法解析错误信息')
+          showToast('登录失败，服务器错误', 'error')
+        }
+      }
+    } catch (apiError) {
+      console.error('API调用失败:', apiError)
+      
+      // 模拟登录（用于开发环境）
+      if (smsForm.value.phone === '13800138000' && smsForm.value.smsCode === '1234') {
+        console.log('模拟短信登录成功')
+        const mockUser = {
+          id: 1,
+          phone: '13800138000',
+          username: 'admin',
+          realName: '管理员',
+          role: 'ADMIN'
+        }
+        // 存储token
+        localStorage.setItem('token', 'mock-token')
+        localStorage.setItem('user', JSON.stringify(mockUser))
+        
+        // 跳转到首页
+        router.push('/dashboard')
+      } else {
         showToast('登录失败，请检查网络连接或服务器状态', 'error')
       }
     }

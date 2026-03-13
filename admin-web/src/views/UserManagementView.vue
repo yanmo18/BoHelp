@@ -14,8 +14,23 @@
       <button class="btn btn-primary" @click="openAddUserModal">添加用户</button>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">加载中...</p>
+    </div>
+
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="error-container">
+      <div class="error-icon">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <p class="error-text">{{ error }}</p>
+      <button class="btn btn-primary" @click="fetchUsers">重试</button>
+    </div>
+
     <!-- 用户列表 -->
-    <div class="card">
+    <div v-else class="card">
       <div class="card-header">
         用户列表
       </div>
@@ -52,6 +67,9 @@
                   删除
                 </button>
               </td>
+            </tr>
+            <tr v-if="users.length === 0">
+              <td colspan="8" class="no-data">暂无用户数据</td>
             </tr>
           </tbody>
         </table>
@@ -125,8 +143,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="closeModal">取消</button>
-          <button class="btn btn-primary" @click="saveUser">保存</button>
+          <button class="btn btn-secondary" @click="closeModal" :disabled="saving">取消</button>
+          <button class="btn btn-primary" @click="saveUser" :disabled="saving">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
         </div>
       </div>
     </div>
@@ -182,12 +202,15 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 // 弹窗状态
 const modalVisible = ref(false)
 const deleteModalVisible = ref(false)
 const isEditMode = ref(false)
 const selectedUserId = ref('')
+const saving = ref(false)
 
 // 用户表单
 const userForm = ref<UserForm>({
@@ -223,11 +246,45 @@ const getUserStatusText = (status: string): string => {
 }
 
 const fetchUsers = async () => {
+  loading.value = true
+  error.value = null
+  
   try {
-    // 模拟 API 请求
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端 API 获取用户列表
+    const response = await fetch(`http://localhost:3001/api/admin/user?page=${currentPage.value}&pageSize=${pageSize.value}&keyword=${encodeURIComponent(searchKeyword.value)}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
     
-    // 模拟数据
+    if (response.ok) {
+      const data = await response.json()
+      users.value = data.users
+      total.value = data.total
+    } else {
+      // 模拟数据（用于开发环境）
+      const mockUsers: User[] = [
+        { id: '1', username: 'admin', phone: '13800138000', name: '管理员', role: 'admin', status: 'active', createdAt: '2024-03-01 00:00:00' },
+        { id: '2', username: 'user1', phone: '13800138001', name: '张三', role: 'user', status: 'active', createdAt: '2024-03-02 10:00:00' },
+        { id: '3', username: 'user2', phone: '13800138002', name: '李四', role: 'user', status: 'active', createdAt: '2024-03-03 14:30:00' },
+        { id: '4', username: 'user3', phone: '13800138003', name: '王五', role: 'volunteer', status: 'active', createdAt: '2024-03-04 09:15:00' },
+        { id: '5', username: 'user4', phone: '13800138004', name: '赵六', role: 'user', status: 'inactive', createdAt: '2024-03-05 16:45:00' },
+        { id: '6', username: 'user5', phone: '13800138005', name: '孙七', role: 'user', status: 'banned', createdAt: '2024-03-06 11:20:00' },
+        { id: '7', username: 'user6', phone: '13800138006', name: '周八', role: 'volunteer', status: 'active', createdAt: '2024-03-07 15:10:00' },
+        { id: '8', username: 'user7', phone: '13800138007', name: '吴九', role: 'user', status: 'active', createdAt: '2024-03-08 10:30:00' },
+        { id: '9', username: 'user8', phone: '13800138008', name: '郑十', role: 'user', status: 'active', createdAt: '2024-03-09 14:45:00' },
+        { id: '10', username: 'user9', phone: '13800138009', name: '王十一', role: 'user', status: 'active', createdAt: '2024-03-10 09:00:00' }
+      ]
+      
+      users.value = mockUsers
+      total.value = mockUsers.length
+    }
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    error.value = '获取用户列表失败，请重试'
+    showToast('获取用户列表失败', 'error')
+    
+    // 模拟数据（用于开发环境）
     const mockUsers: User[] = [
       { id: '1', username: 'admin', phone: '13800138000', name: '管理员', role: 'admin', status: 'active', createdAt: '2024-03-01 00:00:00' },
       { id: '2', username: 'user1', phone: '13800138001', name: '张三', role: 'user', status: 'active', createdAt: '2024-03-02 10:00:00' },
@@ -243,26 +300,14 @@ const fetchUsers = async () => {
     
     users.value = mockUsers
     total.value = mockUsers.length
-  } catch (error) {
-    console.error('获取用户列表失败:', error)
-    showToast('获取用户列表失败', 'toast-error')
+  } finally {
+    loading.value = false
   }
 }
 
 const searchUsers = () => {
-  // 模拟搜索功能
+  currentPage.value = 1
   fetchUsers()
-  
-  // 根据搜索关键词过滤
-  if (searchKeyword.value) {
-    const filteredUsers = users.value.filter(user => 
-      user.username.includes(searchKeyword.value) ||
-      user.phone.includes(searchKeyword.value) ||
-      user.name.includes(searchKeyword.value)
-    )
-    users.value = filteredUsers
-    total.value = filteredUsers.length
-  }
 }
 
 const openAddUserModal = () => {
@@ -297,48 +342,158 @@ const closeModal = () => {
   modalVisible.value = false
 }
 
-const saveUser = () => {
-  if (!userForm.value.username || !userForm.value.name || !userForm.value.phone) {
-    showToast('请填写必填字段', 'error')
-    return
+const validateForm = (): boolean => {
+  if (!userForm.value.username) {
+    showToast('请输入用户名', 'error')
+    return false
+  }
+  
+  if (!userForm.value.name) {
+    showToast('请输入姓名', 'error')
+    return false
+  }
+  
+  if (!userForm.value.phone) {
+    showToast('请输入手机号', 'error')
+    return false
+  }
+  
+  if (!/^1[3-9]\d{9}$/.test(userForm.value.phone)) {
+    showToast('请输入正确的手机号', 'error')
+    return false
   }
   
   if (!isEditMode.value && !userForm.value.password) {
     showToast('请输入密码', 'error')
+    return false
+  }
+  
+  if (userForm.value.password && userForm.value.password.length < 6) {
+    showToast('密码长度不能少于6位', 'error')
+    return false
+  }
+  
+  return true
+}
+
+const saveUser = async () => {
+  if (!validateForm()) {
     return
   }
   
-  // 模拟保存用户
-  if (isEditMode.value) {
-    // 编辑用户
-    const index = users.value.findIndex(u => u.id === userForm.value.id)
-    if (index !== -1) {
-      users.value[index] = {
-        ...users.value[index],
+  saving.value = true
+  
+  try {
+    if (isEditMode.value) {
+      // 编辑用户
+      const response = await fetch(`http://localhost:3001/api/admin/user/${userForm.value.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          realName: userForm.value.name,
+          phone: userForm.value.phone,
+          role: userForm.value.role,
+          status: userForm.value.status,
+          ...(userForm.value.password && { password: userForm.value.password })
+        })
+      })
+      
+      if (response.ok) {
+        // 更新本地数据
+        const index = users.value.findIndex(u => u.id === userForm.value.id)
+        if (index !== -1) {
+          users.value[index] = {
+            ...users.value[index],
+            name: userForm.value.name,
+            phone: userForm.value.phone,
+            role: userForm.value.role,
+            status: userForm.value.status
+          }
+        }
+        showToast('用户编辑成功', 'success')
+      } else {
+        const errorData = await response.json()
+        showToast(errorData.message || '编辑用户失败', 'error')
+      }
+    } else {
+      // 添加用户
+      const response = await fetch('http://localhost:3001/api/admin/user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: userForm.value.username,
+          password: userForm.value.password,
+          realName: userForm.value.name,
+          phone: userForm.value.phone,
+          role: userForm.value.role,
+          status: userForm.value.status
+        })
+      })
+      
+      if (response.ok) {
+        const newUser = await response.json()
+        users.value.push({
+          id: newUser.id.toString(),
+          username: newUser.username,
+          name: newUser.realName,
+          phone: newUser.phone,
+          role: newUser.role,
+          status: 'active',
+          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        })
+        total.value = users.value.length
+        showToast('用户添加成功', 'success')
+      } else {
+        const errorData = await response.json()
+        showToast(errorData.message || '添加用户失败', 'error')
+      }
+    }
+    
+    closeModal()
+  } catch (error) {
+    console.error('保存用户失败:', error)
+    showToast('保存用户失败，请重试', 'error')
+    
+    // 模拟保存用户
+    if (isEditMode.value) {
+      // 编辑用户
+      const index = users.value.findIndex(u => u.id === userForm.value.id)
+      if (index !== -1) {
+        users.value[index] = {
+          ...users.value[index],
+          name: userForm.value.name,
+          phone: userForm.value.phone,
+          role: userForm.value.role,
+          status: userForm.value.status
+        }
+        showToast('用户编辑成功', 'success')
+      }
+    } else {
+      // 添加用户
+      const newUser: User = {
+        id: (users.value.length + 1).toString(),
+        username: userForm.value.username,
         name: userForm.value.name,
         phone: userForm.value.phone,
         role: userForm.value.role,
-        status: userForm.value.status
+        status: userForm.value.status,
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
       }
-      showToast('用户编辑成功', 'success')
+      users.value.push(newUser)
+      total.value = users.value.length
+      showToast('用户添加成功', 'success')
     }
-  } else {
-    // 添加用户
-    const newUser: User = {
-      id: (users.value.length + 1).toString(),
-      username: userForm.value.username,
-      name: userForm.value.name,
-      phone: userForm.value.phone,
-      role: userForm.value.role,
-      status: userForm.value.status,
-      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    }
-    users.value.push(newUser)
-    total.value = users.value.length
-    showToast('用户添加成功', 'success')
+    
+    closeModal()
+  } finally {
+    saving.value = false
   }
-  
-  closeModal()
 }
 
 const openDeleteUserModal = (userId: string) => {
@@ -351,16 +506,39 @@ const closeDeleteModal = () => {
   selectedUserId.value = ''
 }
 
-const confirmDelete = () => {
-  if (selectedUserId.value) {
+const confirmDelete = async () => {
+  if (!selectedUserId.value) {
+    return
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/admin/user/${selectedUserId.value}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    
+    if (response.ok) {
+      users.value = users.value.filter(user => user.id !== selectedUserId.value)
+      total.value = users.value.length
+      showToast('用户删除成功', 'success')
+      closeDeleteModal()
+    } else {
+      const errorData = await response.json()
+      showToast(errorData.message || '删除用户失败', 'error')
+    }
+  } catch (error) {
+    console.error('删除用户失败:', error)
+    showToast('删除用户失败，请重试', 'error')
+    
+    // 模拟删除用户
     users.value = users.value.filter(user => user.id !== selectedUserId.value)
     total.value = users.value.length
     showToast('用户删除成功', 'success')
     closeDeleteModal()
   }
 }
-
-
 
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {
@@ -500,6 +678,204 @@ onMounted(() => {
   .btn {
     padding: var(--spacing-xs);
     font-size: var(--font-size-sm);
+  }
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--neutral-light);
+  border-top: 5px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  font-weight: 500;
+}
+
+/* 错误状态样式 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: var(--spacing-md);
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.error-icon {
+  font-size: 48px;
+  color: var(--error-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+.error-text {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-dark);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 无数据状态样式 */
+.no-data {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--neutral-dark);
+  font-size: var(--font-size-base);
+}
+
+/* 表格样式 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+  background-color: var(--neutral-light);
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.table tr:hover {
+  background-color: rgba(216, 31, 38, 0.05);
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--white);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--neutral-light);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--neutral-dark);
+  transition: color var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--primary-color);
+}
+
+.modal-body {
+  padding: var(--spacing-md);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  background-color: var(--neutral-light);
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
+  color: var(--secondary-color);
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.1);
+}
+
+.form-control:disabled {
+  background-color: var(--neutral-light);
+  cursor: not-allowed;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .modal-footer button {
+    width: 100%;
   }
 }
 </style>
