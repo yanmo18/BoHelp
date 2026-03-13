@@ -1,7 +1,10 @@
 <template>
-  <div class="login-page">
+  <div class="login-page" @mousemove="handleMouseMove">
     <!-- 背景气泡 -->
     <div class="bubble" v-for="i in 15" :key="i" :class="`bubble-${i % 5 + 1}`"></div>
+    
+    <!-- 背景小怪兽 -->
+    <div class="monster" v-for="i in 5" :key="`monster-${i}`" :class="`monster-${i}`" :style="getMonsterStyle(i)"></div>
     
     <div class="login-box">
       <div class="login-logo">
@@ -59,7 +62,10 @@
               required
             />
             <button type="button" class="password-toggle" @click="togglePassword">
-              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+              <div class="eye" :class="{ 'eye-closed': !isEyeOpen }">
+                <div class="pupil" :style="pupilStyle" v-if="isEyeOpen"></div>
+                <div class="eye-lid" v-else></div>
+              </div>
             </button>
           </div>
         </div>
@@ -151,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted, inject, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
@@ -187,8 +193,21 @@ const showPassword = ref(false)
 const captcha = ref('')
 const countdown = ref(0)
 
+// 鼠标位置
+const mouseX = ref(0)
+const mouseY = ref(0)
+
+// 眼睛位置
+const eyeX = ref(0)
+const eyeY = ref(0)
+
+// 眼睛状态
+const isEyeOpen = ref(false)
+
 const togglePassword = () => {
   showPassword.value = !showPassword.value
+  isEyeOpen.value = !isEyeOpen.value
+  console.log('密码可见性切换:', showPassword.value, '眼睛状态:', isEyeOpen.value)
 }
 
 const generateCaptcha = () => {
@@ -411,6 +430,71 @@ const loadSavedCredentials = () => {
   }
 }
 
+// 处理鼠标移动
+const handleMouseMove = (event: MouseEvent) => {
+  mouseX.value = event.clientX
+  mouseY.value = event.clientY
+  
+  // 更新背景样式跟随鼠标
+  const loginPage = document.querySelector('.login-page') as HTMLElement
+  if (loginPage) {
+    loginPage.style.setProperty('--mouse-x', `${event.clientX}px`)
+    loginPage.style.setProperty('--mouse-y', `${event.clientY}px`)
+  }
+  
+  // 让眼球跟随整个页面的鼠标移动
+  const passwordInput = document.querySelector('.password-input-container') as HTMLElement
+  const eyeRect = document.querySelector('.password-toggle')?.getBoundingClientRect()
+  
+  if (eyeRect) {
+    const eyeCenterX = eyeRect.left + eyeRect.width / 2
+    const eyeCenterY = eyeRect.top + eyeRect.height / 2
+    
+    const deltaX = event.clientX - eyeCenterX
+    const deltaY = event.clientY - eyeCenterY
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    const maxDistance = 4 // 限制眼球移动范围，确保在眼睛内部
+    
+    let normalizedX = 0
+    let normalizedY = 0
+    
+    if (distance > 0) {
+      normalizedX = deltaX / distance
+      normalizedY = deltaY / distance
+    }
+    
+    // 确保眼球在眼睛内部
+    eyeX.value = Math.max(-maxDistance, Math.min(maxDistance, normalizedX * maxDistance))
+    eyeY.value = Math.max(-maxDistance, Math.min(maxDistance, normalizedY * maxDistance))
+  }
+}
+
+
+
+// 眼睛样式
+const pupilStyle = computed(() => {
+  return {
+    transform: `translate(${eyeX.value}px, ${eyeY.value}px)`
+  }
+})
+
+// 获取小怪兽样式
+const getMonsterStyle = (index: number) => {
+  const baseSize = 50 + index * 20
+  const speed = 0.001 * (index + 1)
+  const time = Date.now() * speed
+  
+  const x = 10 + Math.sin(time) * 20
+  const y = 10 + Math.cos(time) * 15
+  
+  return {
+    transform: `translate(${x}px, ${y}px)`,
+    width: `${baseSize}px`,
+    height: `${baseSize}px`
+  }
+}
+
 onMounted(() => {
   generateCaptcha()
   loadSavedCredentials()
@@ -418,18 +502,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 全局鼠标样式 */
+.login-page {
+  cursor: default;
+  /* 放大默认光标 */
+  --cursor-size: 18px;
+  font-size: var(--cursor-size);
+}
+
 .login-page {
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: var(--neutral-light);
-  background-image: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  background-image: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(216, 31, 38, 0.15) 0%, rgba(0, 0, 0, 0.1) 50%, rgba(245, 245, 245, 1) 100%);
   position: relative;
   overflow: hidden;
   width: 100%;
   margin: 0;
   padding: 0;
+  transition: background-position 0.1s ease;
+  background-size: 150% 150%;
+  animation: backgroundPulse 3s ease-in-out infinite;
+}
+
+@keyframes backgroundPulse {
+  0%, 100% {
+    background-size: 150% 150%;
+  }
+  50% {
+    background-size: 160% 160%;
+  }
 }
 
 /* 背景气泡样式 */
@@ -490,6 +594,75 @@ onMounted(() => {
   }
 }
 
+/* 背景小怪兽样式 */
+.monster {
+  position: absolute;
+  background-color: rgba(216, 31, 38, 0.8);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  z-index: 1;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.monster::before {
+  content: '👾';
+  font-size: 24px;
+}
+
+.monster-1 {
+  top: 15%;
+  left: 5%;
+  animation: monsterMove 8s ease-in-out infinite;
+}
+
+.monster-2 {
+  top: 25%;
+  right: 10%;
+  background-color: rgba(0, 0, 0, 0.8);
+  animation: monsterMove 10s ease-in-out infinite reverse;
+}
+
+.monster-3 {
+  bottom: 20%;
+  left: 15%;
+  background-color: rgba(216, 31, 38, 0.6);
+  animation: monsterMove 7s ease-in-out infinite;
+}
+
+.monster-4 {
+  bottom: 15%;
+  right: 15%;
+  background-color: rgba(0, 0, 0, 0.6);
+  animation: monsterMove 9s ease-in-out infinite reverse;
+}
+
+.monster-5 {
+  top: 40%;
+  right: 25%;
+  background-color: rgba(216, 31, 38, 0.7);
+  animation: monsterMove 6s ease-in-out infinite;
+}
+
+@keyframes monsterMove {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(20px, -20px) rotate(5deg);
+  }
+  50% {
+    transform: translate(0, 20px) rotate(0deg);
+  }
+  75% {
+    transform: translate(-20px, -10px) rotate(-5deg);
+  }
+}
+
 .login-box {
   background-color: var(--white);
   border-radius: var(--border-radius-lg);
@@ -539,6 +712,7 @@ onMounted(() => {
   font-size: var(--font-size-base);
   transition: all var(--transition-fast);
   background-color: transparent;
+  cursor: inherit;
 }
 
 .form-control:focus {
@@ -573,10 +747,108 @@ onMounted(() => {
   padding: 5px;
   color: var(--neutral-dark);
   transition: color var(--transition-fast);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+  z-index: 100;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
 }
 
 .password-toggle:hover {
+  background-color: rgba(216, 31, 38, 0.1);
   color: var(--primary-color);
+}
+
+/* 眼睛样式 */
+.eye {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid var(--neutral-dark);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.eye.eye-closed {
+  background-color: white;
+  border-color: var(--neutral-dark);
+}
+
+.eye-lid {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  animation: blink 0.3s ease;
+}
+
+/* 上眼睑和眼睫毛 */
+.eye-lid::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10%;
+  width: 120%;
+  height: 2px;
+  background-color: var(--neutral-dark);
+  border-radius: 1px;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 2px var(--neutral-dark), 
+              -8px -2px 0 0 var(--neutral-dark), 
+              -4px -3px 0 0 var(--neutral-dark), 
+              0 -3px 0 0 var(--neutral-dark), 
+              4px -3px 0 0 var(--neutral-dark), 
+              8px -2px 0 0 var(--neutral-dark);
+}
+
+/* 下眼睑和眼睫毛 */
+.eye-lid::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10%;
+  width: 120%;
+  height: 2px;
+  background-color: var(--neutral-dark);
+  border-radius: 1px;
+  transform: translateY(-50%) rotate(180deg);
+  box-shadow: 0 0 0 2px var(--neutral-dark), 
+              -8px 2px 0 0 var(--neutral-dark), 
+              -4px 3px 0 0 var(--neutral-dark), 
+              0 3px 0 0 var(--neutral-dark), 
+              4px 3px 0 0 var(--neutral-dark), 
+              8px 2px 0 0 var(--neutral-dark);
+}
+
+@keyframes blink {
+  0% {
+    transform: scaleY(0);
+  }
+  50% {
+    transform: scaleY(0.5);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.pupil {
+  width: 8px;
+  height: 8px;
+  background-color: var(--secondary-color);
+  border-radius: 50%;
+  transition: transform 0.1s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* 验证码输入框样式 */
@@ -640,6 +912,7 @@ onMounted(() => {
   color: var(--primary-color);
   text-decoration: none;
   transition: color var(--transition-fast);
+  cursor: inherit;
 }
 
 .forgot-password:hover {
@@ -652,6 +925,7 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
+  cursor: inherit;
 }
 
 .checkbox-text {
@@ -665,6 +939,7 @@ onMounted(() => {
   font-weight: 600;
   border-radius: var(--border-radius-md);
   transition: all var(--transition-fast);
+  cursor: inherit;
 }
 
 .btn-primary:hover {
@@ -808,6 +1083,10 @@ onMounted(() => {
   .qrcode-placeholder img {
     width: 140px;
     height: 140px;
+  }
+  
+  .monster {
+    transform: scale(0.7);
   }
 }
 </style>
