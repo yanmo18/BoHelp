@@ -233,7 +233,7 @@ const fetchVillages = async () => {
     total.value = mockVillages.length
   } catch (error) {
     console.error('获取村庄列表失败:', error)
-    showToast('获取村庄列表失败', 'toast-error')
+    showToast('获取村庄列表失败', 'error')
   }
 }
 
@@ -297,12 +297,14 @@ const saveVillage = () => {
     const index = villages.value.findIndex(v => v.id === villageForm.value.id)
     if (index !== -1) {
       villages.value[index] = {
-        ...villages.value[index],
+        id: villages.value[index].id,
         name: villageForm.value.name,
+        code: villages.value[index].code,
         manager: villageForm.value.manager,
         phone: villageForm.value.phone,
         address: villageForm.value.address,
-        status: villageForm.value.status
+        status: villageForm.value.status,
+        createdAt: villages.value[index].createdAt
       }
       showToast('村庄编辑成功', 'success')
     }

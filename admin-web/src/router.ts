@@ -76,7 +76,7 @@ const router = createRouter({
 })
 
 // 设置页面标题
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   document.title = `博城帮管理后台 - ${to.meta.title}`
   next()
 })

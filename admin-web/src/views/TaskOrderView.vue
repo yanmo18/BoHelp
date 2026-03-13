@@ -250,7 +250,7 @@ const fetchOrders = async () => {
     }
   } catch (error) {
     console.error('获取悬赏订单失败:', error)
-    error.value = '获取悬赏订单失败，请重试'
+    error.value = '获取悬赏订单失败，请重试' as string
     showToast('获取悬赏订单失败', 'error')
     
     // 模拟数据（用于开发环境）

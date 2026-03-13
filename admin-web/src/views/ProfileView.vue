@@ -128,7 +128,7 @@ import { useRouter } from 'vue-router'
 
 const showToast = inject('showToast') as (message: string, type?: 'success' | 'error' | 'info') => void
 
-const router = useRouter()
+// const router = useRouter()
 
 interface UserForm {
   username: string

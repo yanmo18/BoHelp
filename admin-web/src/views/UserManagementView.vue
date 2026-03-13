@@ -281,7 +281,7 @@ const fetchUsers = async () => {
     }
   } catch (error) {
     console.error('获取用户列表失败:', error)
-    error.value = '获取用户列表失败，请重试'
+    error.value = '获取用户列表失败，请重试' as string
     showToast('获取用户列表失败', 'error')
     
     // 模拟数据（用于开发环境）
@@ -406,11 +406,13 @@ const saveUser = async () => {
         const index = users.value.findIndex(u => u.id === userForm.value.id)
         if (index !== -1) {
           users.value[index] = {
-            ...users.value[index],
-            name: userForm.value.name,
+            id: users.value[index].id,
+            username: users.value[index].username,
             phone: userForm.value.phone,
+            name: userForm.value.name,
             role: userForm.value.role,
-            status: userForm.value.status
+            status: userForm.value.status,
+            createdAt: users.value[index].createdAt
           }
         }
         showToast('用户编辑成功', 'success')
@@ -466,11 +468,13 @@ const saveUser = async () => {
       const index = users.value.findIndex(u => u.id === userForm.value.id)
       if (index !== -1) {
         users.value[index] = {
-          ...users.value[index],
-          name: userForm.value.name,
+          id: users.value[index].id,
+          username: users.value[index].username,
           phone: userForm.value.phone,
+          name: userForm.value.name,
           role: userForm.value.role,
-          status: userForm.value.status
+          status: userForm.value.status,
+          createdAt: users.value[index].createdAt
         }
         showToast('用户编辑成功', 'success')
       }

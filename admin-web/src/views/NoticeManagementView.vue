@@ -209,7 +209,7 @@ const fetchNotices = async () => {
     total.value = mockNotices.length
   } catch (error) {
     console.error('获取公告列表失败:', error)
-    showToast('获取公告列表失败', 'toast-error')
+    showToast('获取公告列表失败', 'error')
   }
 }
 
@@ -265,10 +265,12 @@ const saveNotice = () => {
     const index = notices.value.findIndex(n => n.id === noticeForm.value.id)
     if (index !== -1) {
       notices.value[index] = {
-        ...notices.value[index],
+        id: notices.value[index].id,
         title: noticeForm.value.title,
         content: noticeForm.value.content,
-        status: noticeForm.value.status
+        author: notices.value[index].author,
+        status: noticeForm.value.status,
+        createdAt: notices.value[index].createdAt
       }
       showToast('公告编辑成功', 'success')
     }

@@ -443,7 +443,6 @@ const handleMouseMove = (event: MouseEvent) => {
   }
   
   // 让眼球跟随整个页面的鼠标移动
-  const passwordInput = document.querySelector('.password-input-container') as HTMLElement
   const eyeRect = document.querySelector('.password-toggle')?.getBoundingClientRect()
   
   if (eyeRect) {
